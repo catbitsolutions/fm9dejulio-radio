@@ -91,8 +91,6 @@ export default function Home() {
   const [sleepTimerDisplay, setSleepTimerDisplay] = useState<string | null>(null)
   const [showSleepOptions, setShowSleepOptions] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
-  const [likes, setLikes] = useState(0)
-  const [userLiked, setUserLiked] = useState(false)
   
   // Referencias para reconexión automática simple
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -123,19 +121,6 @@ export default function Home() {
     const interval = setInterval(updateProgram, 60000)
     return () => clearInterval(interval)
   }, [getCurrentProgram])
-
-  // Cargar datos guardados desde localStorage
-  useEffect(() => {
-    const savedLikes = localStorage.getItem('fm9_likes')
-    const savedUserLiked = localStorage.getItem('fm9_user_liked')
-    if (savedLikes) {
-      const parsed = parseInt(savedLikes)
-      requestAnimationFrame(() => setLikes(parsed))
-    }
-    if (savedUserLiked) {
-      requestAnimationFrame(() => setUserLiked(savedUserLiked === 'true'))
-    }
-  }, [])
 
   // Detectar modo oscuro del sistema
   useEffect(() => {
@@ -225,17 +210,6 @@ export default function Home() {
     setDarkMode(newMode)
     localStorage.setItem('fm9_darkMode', String(newMode))
   }, [darkMode])
-
-  // Like
-  const handleLike = useCallback(() => {
-    if (!userLiked) {
-      const newLikes = likes + 1
-      setLikes(newLikes)
-      setUserLiked(true)
-      localStorage.setItem('fm9_likes', String(newLikes))
-      localStorage.setItem('fm9_user_liked', 'true')
-    }
-  }, [likes, userLiked])
 
   // Sleep timer
   const setSleep = useCallback((minutes: number) => {
@@ -1501,39 +1475,6 @@ export default function Home() {
             </svg>
           )}
         </button>
-      </div>
-
-      {/* Like counter */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '8px 15px',
-        background: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: '20px',
-      }}>
-        <button 
-          onClick={handleLike} 
-          disabled={userLiked}
-          style={{
-            background: userLiked ? colors.primary : 'transparent',
-            border: `1px solid ${colors.primary}`,
-            borderRadius: '50%',
-            width: '32px',
-            height: '32px',
-            cursor: userLiked ? 'default' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '14px',
-            transition: 'all 0.2s ease',
-          }}
-        >
-          {userLiked ? '❤️' : '🤍'}
-        </button>
-        <span style={{ fontSize: '13px', fontWeight: '500' }}>
-          {likes} {likes === 1 ? 'me gusta' : 'me gustas'}
-        </span>
       </div>
 
       {/* Volumen */}
