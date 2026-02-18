@@ -840,9 +840,12 @@ export default function Home() {
       ctx.font = '10px monospace'
       ctx.fillStyle = '#00FF00'
       ctx.fillText('FM 9 de JULIO - 102.3 MHz', 5, 12)
-      ctx.fillText(`AMP: ${Math.round(currentVolumeLevel * 100)}%`, 5, height - 5)
+      
+      // Calcular amplitud promedio
+      const avgAmp = dataArray.reduce((a, b) => a + b, 0) / bufferLength
+      ctx.fillText(`AMP: ${Math.round((avgAmp / 255) * 100)}%`, 5, height - 5)
     }
-  }, [colors, currentVolumeLevel])
+  }, [colors])
 
   // Animación visualizador
   const startVisualizer = useCallback(() => {
@@ -1355,34 +1358,34 @@ export default function Home() {
       </div>
 
       {/* Botones */}
-      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '10px', flex: '0 0 auto' }}>
-        <button onClick={sendDedicatoria} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', minWidth: '50px' }}>
-          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#EC4899', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(236, 72, 153, 0.4)', margin: '0 auto' }}><span style={{ fontSize: '16px' }}>💌</span></div>
-          <span style={{ color: colors.textMuted, fontSize: '9px' }}>Dedicatoria</span>
+      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: '12px', flex: '0 0 auto', padding: '5px 0' }}>
+        <button onClick={sendDedicatoria} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '52px', flexShrink: 0 }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#EC4899', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(236, 72, 153, 0.4)' }}><span style={{ fontSize: '16px' }}>💌</span></div>
+          <span style={{ color: colors.textMuted, fontSize: '9px', textAlign: 'center' }}>Dedicatoria</span>
         </button>
-        <a href="https://wa.me/543644503323" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', minWidth: '50px' }}>
-          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#25D366', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(37, 211, 102, 0.4)', margin: '0 auto' }}>
+        <a href="https://wa.me/543644503323" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textDecoration: 'none', width: '52px', flexShrink: 0 }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#25D366', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(37, 211, 102, 0.4)' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
           </div>
-          <span style={{ color: colors.textMuted, fontSize: '9px' }}>WhatsApp</span>
+          <span style={{ color: colors.textMuted, fontSize: '9px', textAlign: 'center' }}>WhatsApp</span>
         </a>
-        <a href="https://www.facebook.com/fm9dejuliotresisletas" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', minWidth: '50px' }}>
-          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#1877F2', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(24, 119, 242, 0.4)', margin: '0 auto' }}>
+        <a href="https://www.facebook.com/fm9dejuliotresisletas" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textDecoration: 'none', width: '52px', flexShrink: 0 }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#1877F2', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(24, 119, 242, 0.4)' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
           </div>
-          <span style={{ color: colors.textMuted, fontSize: '9px' }}>Facebook</span>
+          <span style={{ color: colors.textMuted, fontSize: '9px', textAlign: 'center' }}>Facebook</span>
         </a>
-        <button onClick={handleShare} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', minWidth: '50px' }}>
-          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 3px 10px ${colors.primary}40`, margin: '0 auto' }}>
+        <button onClick={handleShare} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '52px', flexShrink: 0 }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 3px 10px ${colors.primary}40` }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
           </div>
-          <span style={{ color: colors.textMuted, fontSize: '9px' }}>Compartir</span>
+          <span style={{ color: colors.textMuted, fontSize: '9px', textAlign: 'center' }}>Compartir</span>
         </button>
-        <a href="https://play.google.com/store/apps/details?id=com.radioshd.fm9dejulio" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', minWidth: '50px' }}>
-          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg, #00C4FF 0%, #7B2FFF 50%, #F50057 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(123, 47, 255, 0.4)', margin: '0 auto' }}>
+        <a href="https://play.google.com/store/apps/details?id=com.radioshd.fm9dejulio" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textDecoration: 'none', width: '52px', flexShrink: 0 }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #00C4FF 0%, #7B2FFF 50%, #F50057 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(123, 47, 255, 0.4)' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.198l2.807 1.626a1 1 0 010 1.73l-2.808 1.626L15.206 12l2.492-2.491zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z"/></svg>
           </div>
-          <span style={{ color: colors.textMuted, fontSize: '9px' }}>App</span>
+          <span style={{ color: colors.textMuted, fontSize: '9px', textAlign: 'center' }}>App</span>
         </a>
       </div>
 
