@@ -55,15 +55,16 @@ const VISUALIZER_MODES = [
   { name: 'Osciloscopio', icon: '📊' },
 ]
 
-// Programación de la radio
-const PROGRAMMING = [
-  { name: 'Madrugada Musical', start: 0, end: 6, days: [0,1,2,3,4,5,6] },
-  { name: 'Buenos Días Tres Isletas', start: 6, end: 9, days: [0,1,2,3,4,5,6] },
-  { name: 'Mañana FM', start: 9, end: 12, days: [0,1,2,3,4,5,6] },
-  { name: 'Mediodía con FM 9', start: 12, end: 15, days: [0,1,2,3,4,5,6] },
-  { name: 'Tarde FM', start: 15, end: 18, days: [0,1,2,3,4,5,6] },
-  { name: 'Atardecer Musical', start: 18, end: 21, days: [0,1,2,3,4,5,6] },
-  { name: 'Noche FM 9 de Julio', start: 21, end: 24, days: [0,1,2,3,4,5,6] },
+// Programación de la radio - Horarios Argentina (24hs)
+// Los horarios de atardecer/noche se ajustan dinámicamente según el sol
+const PROGRAMMING_DEFAULT = [
+  { name: 'Madrugada', start: 0, end: 6 },
+  { name: 'Buenos Días', start: 6, end: 9 },
+  { name: 'Mañana', start: 9, end: 12 },
+  { name: 'Mediodía', start: 12, end: 15 },
+  { name: 'Tarde', start: 15, end: 18 },
+  { name: 'Atardecer', start: 18, end: 21 },
+  { name: 'Noche', start: 21, end: 24 },
 ]
 
 // Logros
@@ -123,7 +124,6 @@ export default function Home() {
   const [sleepTimerDisplay, setSleepTimerDisplay] = useState<string | null>(null)
   const [showSleepOptions, setShowSleepOptions] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
-  const [partyMode, setPartyMode] = useState(false)
   const [themeIndex, setThemeIndex] = useState(0)
   const [currentTheme, setCurrentTheme] = useState(THEMES[0])
   
@@ -138,11 +138,11 @@ export default function Home() {
     achievements: []
   })
   const [showStats, setShowStats] = useState(false)
-  const [currentVolumeLevel, setCurrentVolumeLevel] = useState(0)
   
-  // Clima
+  // Clima y horarios de sol
   const [weather, setWeather] = useState<{ temp: number; desc: string; icon: string } | null>(null)
   const [weatherLoading, setWeatherLoading] = useState(true)
+  const [sunTimes, setSunTimes] = useState<{ sunrise: number; sunset: number }>({ sunrise: 6, sunset: 20 })
 
   // Colores dinámicos según tema y modo
   const colors = darkMode ? {
@@ -189,7 +189,6 @@ export default function Home() {
     if (isPlaying) {
       interval = setInterval(() => {
         listenTimeRef.current += 1
-        setCurrentVolumeLevel(analyserRef.current ? getVolumeLevel() : 0)
         
         // Cada 60 segundos, actualizar stats
         if (listenTimeRef.current >= 60) {
@@ -237,25 +236,14 @@ export default function Home() {
     }
   }, [isPlaying])
 
-  // Obtener nivel de volumen
-  const getVolumeLevel = useCallback(() => {
-    const analyser = analyserRef.current
-    if (!analyser) return 0
-    
-    const dataArray = new Uint8Array(analyser.frequencyBinCount)
-    analyser.getByteFrequencyData(dataArray)
-    
-    const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length
-    return average / 255
-  }, [])
-
-  // Obtener clima
+  // Obtener clima y horarios de sol
   useEffect(() => {
     const fetchWeather = async () => {
       try {
         // Usando Open-Meteo API (no requiere API key)
+        // Incluye horarios de salida y puesta de sol
         const response = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${TRES_ISLETAS_LAT}&longitude=${TRES_ISLETAS_LON}&current_weather=true&timezone=America/Argentina/Buenos_Aires`
+          `https://api.open-meteo.com/v1/forecast?latitude=${TRES_ISLETAS_LAT}&longitude=${TRES_ISLETAS_LON}&current_weather=true&daily=sunrise,sunset&timezone=America/Argentina/Buenos_Aires`
         )
         const data = await response.json()
         
@@ -274,6 +262,18 @@ export default function Home() {
           else if (code <= 99) { icon = '⛈️'; desc = 'Tormenta' }
           
           setWeather({ temp, desc, icon })
+        }
+        
+        // Obtener horarios de sol
+        if (data.daily?.sunrise && data.daily?.sunset) {
+          const sunriseStr = data.daily.sunrise[0] // "2025-02-18T06:45"
+          const sunsetStr = data.daily.sunset[0]   // "2025-02-18T19:30"
+          
+          // Extraer hora (formato ISO a hora local)
+          const sunriseHour = new Date(sunriseStr).getHours()
+          const sunsetHour = new Date(sunsetStr).getHours()
+          
+          setSunTimes({ sunrise: sunriseHour, sunset: sunsetHour })
         }
       } catch (error) {
         console.error('Error fetching weather:', error)
@@ -295,17 +295,22 @@ export default function Home() {
   const firstTouchDoneRef = useRef<boolean>(false)
   const sleepTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Obtener programa actual
+  // Obtener programa actual según hora y horarios de sol
   const getCurrentProgram = useCallback(() => {
     const now = new Date()
     const hour = now.getHours()
-    const day = now.getDay()
+    const sunrise = sunTimes.sunrise
+    const sunset = sunTimes.sunset
     
-    const program = PROGRAMMING.find(p => 
-      hour >= p.start && hour < p.end && p.days.includes(day)
-    )
-    return program?.name || 'FM 9 de Julio'
-  }, [])
+    // Ajustar programa según horarios de sol dinámicos
+    if (hour >= 0 && hour < sunrise) return 'Madrugada'
+    if (hour >= sunrise && hour < 9) return 'Buenos Días'
+    if (hour >= 9 && hour < 12) return 'Mañana'
+    if (hour >= 12 && hour < 15) return 'Mediodía'
+    if (hour >= 15 && hour < sunset - 1) return 'Tarde'
+    if (hour >= sunset - 1 && hour < sunset + 2) return 'Atardecer'
+    return 'Noche'
+  }, [sunTimes])
 
   // Actualizar programa actual
   useEffect(() => {
@@ -418,11 +423,6 @@ export default function Home() {
     setCurrentTheme(THEMES[newIdx])
     localStorage.setItem('fm9_theme', String(newIdx))
   }, [themeIndex])
-
-  // Toggle party mode
-  const togglePartyMode = useCallback(() => {
-    setPartyMode(prev => !prev)
-  }, [])
 
   // Sleep timer
   const setSleep = useCallback((minutes: number) => {
@@ -1220,9 +1220,6 @@ export default function Home() {
             <button onClick={cycleTheme} style={{ background: currentTheme.primary, border: 'none', borderRadius: '5px', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>
               🎨
             </button>
-            <button onClick={togglePartyMode} style={{ background: partyMode ? '#FF69B4' : 'transparent', border: `1px solid ${colors.primary}`, borderRadius: '5px', padding: '4px 8px', cursor: 'pointer', fontSize: '12px' }}>
-              🌈
-            </button>
           </div>
           
           {/* Clima */}
@@ -1313,20 +1310,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* VU Meter */}
-      <div style={{ width: '100%', maxWidth: '320px', display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 0' }}>
-        <span style={{ fontSize: '10px', color: colors.textMuted }}>🎙️</span>
-        <div style={{ flex: 1, height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-          <div style={{
-            width: `${currentVolumeLevel * 100}%`, height: '100%',
-            background: currentVolumeLevel > 0.7 ? 'linear-gradient(90deg, #22c55e, #eab308, #ef4444)' :
-                       currentVolumeLevel > 0.4 ? 'linear-gradient(90deg, #22c55e, #eab308)' : '#22c55e',
-            transition: 'width 0.1s ease', borderRadius: '4px'
-          }} />
-        </div>
-        <span style={{ fontSize: '10px', color: colors.textMuted, minWidth: '30px' }}>{Math.round(currentVolumeLevel * 100)}%</span>
-      </div>
-
       {/* Visualizador */}
       <div onClick={cycleVisualizerMode} style={{
         width: '100%', maxWidth: '320px', height: '50px', borderRadius: '8px', overflow: 'hidden',
@@ -1372,31 +1355,31 @@ export default function Home() {
       </div>
 
       {/* Botones */}
-      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '8px', flex: '0 0 auto', flexWrap: 'wrap' }}>
-        <button onClick={sendDedicatoria} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
-          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#EC4899', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(236, 72, 153, 0.4)' }}><span style={{ fontSize: '16px' }}>💌</span></div>
+      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '10px', flex: '0 0 auto' }}>
+        <button onClick={sendDedicatoria} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', minWidth: '50px' }}>
+          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#EC4899', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(236, 72, 153, 0.4)', margin: '0 auto' }}><span style={{ fontSize: '16px' }}>💌</span></div>
           <span style={{ color: colors.textMuted, fontSize: '9px' }}>Dedicatoria</span>
         </button>
-        <a href="https://wa.me/543644503323" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none' }}>
-          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#25D366', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(37, 211, 102, 0.4)' }}>
+        <a href="https://wa.me/543644503323" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', minWidth: '50px' }}>
+          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#25D366', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(37, 211, 102, 0.4)', margin: '0 auto' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
           </div>
           <span style={{ color: colors.textMuted, fontSize: '9px' }}>WhatsApp</span>
         </a>
-        <a href="https://www.facebook.com/fm9dejuliotresisletas" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none' }}>
-          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#1877F2', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(24, 119, 242, 0.4)' }}>
+        <a href="https://www.facebook.com/fm9dejuliotresisletas" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', minWidth: '50px' }}>
+          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#1877F2', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(24, 119, 242, 0.4)', margin: '0 auto' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
           </div>
           <span style={{ color: colors.textMuted, fontSize: '9px' }}>Facebook</span>
         </a>
-        <button onClick={handleShare} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
-          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 3px 10px ${colors.primary}40` }}>
+        <button onClick={handleShare} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', minWidth: '50px' }}>
+          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 3px 10px ${colors.primary}40`, margin: '0 auto' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
           </div>
           <span style={{ color: colors.textMuted, fontSize: '9px' }}>Compartir</span>
         </button>
-        <a href="https://play.google.com/store/apps/details?id=com.radioshd.fm9dejulio" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none' }}>
-          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg, #00C4FF 0%, #7B2FFF 50%, #F50057 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(123, 47, 255, 0.4)' }}>
+        <a href="https://play.google.com/store/apps/details?id=com.radioshd.fm9dejulio" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', minWidth: '50px' }}>
+          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg, #00C4FF 0%, #7B2FFF 50%, #F50057 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(123, 47, 255, 0.4)', margin: '0 auto' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.198l2.807 1.626a1 1 0 010 1.73l-2.808 1.626L15.206 12l2.492-2.491zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z"/></svg>
           </div>
           <span style={{ color: colors.textMuted, fontSize: '9px' }}>App</span>
